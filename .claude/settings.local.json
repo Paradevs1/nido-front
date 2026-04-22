@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"WAGMI\\\\|RPC\\\\|CHAIN\" /c/WORKS/PARADEVS/bounties.front/bounties-front/.env*)",
+      "WebFetch(domain:docs.celo.org)",
+      "Bash(npx next:*)",
+      "Bash(ngrok version:*)",
+      "Bash(ngrok http:*)",
+      "Bash(curl -s http://127.0.0.1:4040/api/tunnels)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://bounties-api.vercel.app/api/host/campaigns/public\")",
+      "Bash(curl -s -w \"\\\\n%{http_code}\" \"https://bounties-api.vercel.app/api/host/campaigns/public?page=1&limit=8\")",
+      "Bash(taskkill //F //IM ngrok.exe)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d['tunnels'][0]['public_url']\\)\")",
+      "Bash(ngrok start:*)",
+      "Bash(npx --yes localtunnel --version)",
+      "Bash(npx localtunnel:*)",
+      "Bash(taskkill //F //IM lt.exe)",
+      "Bash(python3 -c \"import sys,json; print\\(json.load\\(sys.stdin\\)['tunnels'][0]['public_url']\\)\")",
+      "Bash(tasklist)",
+      "Bash(git -C \"c:/WORKS/PARADEVS/bounties.front\" log --oneline -20)",
+      "Bash(git -C \"c:/WORKS/PARADEVS/bounties.front\" log --all --oneline --grep=\"sort\\\\|order\\\\|completed\" -20)",
+      "Bash(git -C \"c:/WORKS/PARADEVS/bounties.front\" log --all -p --follow -- \"bounties-front/src/lib/api/campaign.ts\")"
+    ]
+  }
+}

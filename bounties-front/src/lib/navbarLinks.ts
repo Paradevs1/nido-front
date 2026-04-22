@@ -1,0 +1,84 @@
+// Links da navbar baseados no role do usuário
+export type Role = "guest" | "creator" | "host";
+
+interface Feather {
+  src: string;
+  width: number;
+  height: number;
+}
+
+interface NavLink {
+  label: string;
+  href: string;
+  feather: Feather;
+  isExternal?: boolean;
+  target?: string;
+  rel?: string;
+  children?: { label: string; href: string }[];
+}
+
+export function getNavbarLinks(role: Role): NavLink[] {
+  const homeFeather = {
+    src: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNyIgdmlld0JveD0iMCAwIDY0IDciIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0xIDMuNUMxIDEuNTY3IDEuNTY3IDEgMy41IDFIMTYuNUwxNy41IDJIMjIuNUwyMy41IDFIMjYuNUwyNy41IDJIMzAuNUwzMS41IDFIMzQuNUwzNS41IDJIMjguNUwyOS41IDFIMjYuNUwyNS41IDJIMjAuNUwxOS41IDFIMTYuNUwxNS41IDJIMTAuNUw5LjUgMUg2LjVMNS41IDJIMTIuNUwxMS41IDFIOUM4LjQ0NzcyIDEgOCAxLjQ0NzcyIDggMlY1QzggNS41NTIyOCA4LjQ0NzcyIDYgOSA2SDExQzExLjU1MjMgNiAxMiA1LjU1MjI4IDEyIDVWMkMxMiAxLjQ0NzcyIDEyLjQ0NzcgMSAxMyAxSDIxQzIxLjU1MjMgMSAyMiAxLjQ0NzcyIDIyIDJWNEMyMiA0LjU1MjI4IDIyLjQ0NzcgNSAyMyA1SDI1QzI1LjU1MjMgNSAyNiA0LjU1MjI4IDI2IDRWMkMyNiAxLjQ0NzcyIDI2LjQ0NzcgMSAyNyAxSDM1QzM1LjU1MjMgMSAzNiAxLjQ0NzcyIDM2IDJWNEMzNiA0LjU1MjI4IDM2LjQ0NzcgNSAzNyA1SDM5QzM5LjU1MjMgNSA0MCA0LjU1MjI4IDQwIDRWMkM0MCAxLjQ0NzcyIDQwLjQ0NzcgMSA0MSAxSDQ5QzQ5LjU1MjMgMSA1MCAxLjQ0NzcyIDUwIDJWNEM1MCA0LjU1MjI4IDUwLjQ0NzcgNSA1MSA1SDUzQzUzLjU1MjMgNSA1NCA0LjU1MjI4IDU0IDRWMkM1NCAxLjQ0NzcyIDU0LjQ0NzcgMSA1NSAxSDYzQzYzLjU1MjMgMSA2NCAxLjQ0NzcyIDY0IDJWNEM2NCA0LjU1MjI4IDYzLjU1MjMgNSA2MyA1SDYxQzYwLjQ0NzcgNSA2MCA0LjU1MjI4IDYwIDRWMkM2MCAxLjQ0NzcyIDU5LjU1MjMgMSA1OSAxSDQ5QzQ4LjQ0NzcgMSA0OCAxLjQ0NzcyIDQ4IDJWNEM0OCA0LjU1MjI4IDQ4LjQ0NzcgNSA0OSA1SDQ3QzQ2LjQ0NzcgNSA0NiA0LjU1MjI4IDQ2IDRWMkM0NiAxLjQ0NzcyIDQ1LjU1MjMgMSA0NSAxSDM3QzM2LjQ0NzcgMSAzNiAxLjQ0NzcyIDM2IDJWNEMzNiA0LjU1MjI4IDM2LjQ0NzcgNSAzNyA1SDM1QzM0LjQ0NzcgNSAzNCA0LjU1MjI4IDM0IDRWMkMzNCAxLjQ0NzcyIDMzLjU1MjMgMSAzMyAxSDI1QzI0LjQ0NzcgMSAyNCAxLjQ0NzcyIDI0IDJWNEMyNCA0LjU1MjI4IDI0LjQ0NzcgNSAyNSA1SDIzQzIyLjQ0NzcgNSAyMiA0LjU1MjI4IDIyIDRWMkMyMiAxLjQ0NzcyIDIxLjU1MjMgMSAyMSAxSDEzQzEyLjQ0NzcgMSAxMiAxLjQ0NzcyIDEyIDJWNEMxMiA0LjU1MjI4IDEyLjQ0NzcgNSAxMyA1SDExQzEwLjQ0NzcgNSAxMCA0LjU1MjI4IDEwIDRWMkMxMCAxLjQ0NzcyIDkuNTUyMjggMSA5IDFIMUMwLjQ0NzcxNTUgMSAwIDEuNDQ3NzIgMCAyVjMuNUMwIDUuNDMzIDAuNTUyMjg1IDYgMi41IDZIMzAuNUwzMS41IDVIMjguNUwyNy41IDZIMjQuNUwyMy41IDVIMjAuNUwxOS41IDZIMTYuNUwxNS41IDVIMTIuNUwxMS41IDZIOUM4LjQ0NzcyIDYgOCA1LjU1MjI4IDggNVYzLjVaIiBmaWxsPSIjMDAwIi8+Cjwvc3ZnPgo=",
+    width: 64,
+    height: 7
+  };
+
+  const servicesFeather = {
+    src: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNyIgdmlld0JveD0iMCAwIDY0IDciIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0xIDMuNUMxIDEuNTY3IDEuNTY3IDEgMy41IDFIMTYuNUwxNy41IDJIMjIuNUwyMy41IDFIMjYuNUwyNy41IDJIMzAuNUwzMS41IDFIMzQuNUwzNS41IDJIMjguNUwyOS41IDFIMjYuNUwyNS41IDJIMjAuNUwxOS41IDFIMTYuNUwxNS41IDJIMTAuNUw5LjUgMUg2LjVMNS41IDJIMTIuNUwxMS41IDFIOUM4LjQ0NzcyIDEgOCAxLjQ0NzcyIDggMlY1QzggNS41NTIyOCA4LjQ0NzcyIDYgOSA2SDExQzExLjU1MjMgNiAxMiA1LjU1MjI4IDEyIDVWMkMxMiAxLjQ0NzcyIDEyLjQ0NzcgMSAxMyAxSDIxQzIxLjU1MjMgMSAyMiAxLjQ0NzcyIDIyIDJWNEMyMiA0LjU1MjI4IDIyLjQ0NzcgNSAyMyA1SDI1QzI1LjU1MjMgNSAyNiA0LjU1MjI4IDI2IDRWMkMyNiAxLjQ0NzcyIDI2LjQ0NzcgMSAyNyAxSDM1QzM1LjU1MjMgMSAzNiAxLjQ0NzcyIDM2IDJWNEMzNiA0LjU1MjI4IDM2LjQ0NzcgNSAzNyA1SDM5QzM5LjU1MjMgNSA0MCA0LjU1MjI4IDQwIDRWMkM0MCAxLjQ0NzcyIDQwLjQ0NzcgMSA0MSAxSDQ5QzQ5LjU1MjMgMSA1MCAxLjQ0NzcyIDUwIDJWNEM1MCA0LjU1MjI4IDUwLjQ0NzcgNSA1MSA1SDUzQzUzLjU1MjMgNSA1NCA0LjU1MjI4IDU0IDRWMkM1NCAxLjQ0NzcyIDU0LjQ0NzcgMSA1NSAxSDYzQzYzLjU1MjMgMSA2NCAxLjQ0NzcyIDY0IDJWNEM2NCA0LjU1MjI4IDYzLjU1MjMgNSA2MyA1SDYxQzYwLjQ0NzcgNSA2MCA0LjU1MjI4IDYwIDRWMkM2MCAxLjQ0NzcyIDU5LjU1MjMgMSA1OSAxSDQ5QzQ4LjQ0NzcgMSA0OCAxLjQ0NzcyIDQ4IDJWNEM0OCA0LjU1MjI4IDQ4LjQ0NzcgNSA0OSA1SDQ3QzQ2LjQ0NzcgNSA0NiA0LjU1MjI4IDQ2IDRWMkM0NiAxLjQ0NzcyIDQ1LjU1MjMgMSA0NSAxSDM3QzM2LjQ0NzcgMSAzNiAxLjQ0NzcyIDM2IDJWNEMzNiA0LjU1MjI4IDM2LjQ0NzcgNSAzNyA1SDM1QzM0LjQ0NzcgNSAzNCA0LjU1MjI4IDM0IDRWMkMzNCAxLjQ0NzcyIDMzLjU1MjMgMSAzMyAxSDI1QzI0LjQ0NzcgMSAyNCAxLjQ0NzcyIDI0IDJWNEMyNCA0LjU1MjI4IDI0LjQ0NzcgNSAyNSA1SDIzQzIyLjQ0NzcgNSAyMiA0LjU1MjI4IDIyIDRWMkMyMiAxLjQ0NzcyIDIxLjU1MjMgMSAyMSAxSDEzQzEyLjQ0NzcgMSAxMiAxLjQ0NzcyIDEyIDJWNEMxMiA0LjU1MjI4IDEyLjQ0NzcgNSAxMyA1SDExQzEwLjQ0NzcgNSAxMCA0LjU1MjI4IDEwIDRWMkMxMCAxLjQ0NzcyIDkuNTUyMjggMSA5IDFIMUMwLjQ0NzcxNTUgMSAwIDEuNDQ3NzIgMCAyVjMuNUMwIDUuNDMzIDAuNTUyMjg1IDYgMi41IDZIMzAuNUwzMS41IDVIMjguNUwyNy41IDZIMjQuNUwyMy41IDVIMjAuNUwxOS41IDZIMTYuNUwxNS41IDVIMTIuNUwxMS41IDZIOUM4LjQ0NzcyIDYgOCA1LjU1MjI4IDggNVYzLjVaIiBmaWxsPSIjMDAwIi8+Cjwvc3ZnPgo=",
+    width: 64,
+    height: 7
+  };
+
+  if (role === "host") {
+    return [
+      {
+        label: "Campaigns",
+        href: "/host/campaign",
+        feather: homeFeather,
+        children: [
+          { label: "Campaigns", href: "/host/campaign" },
+          { label: "Manage Campaigns", href: "/host/campaign/manage" },
+        ],
+      },
+      {
+        label: "Communities",
+        href: "/host/communities",
+        feather: servicesFeather
+      },
+      {
+        label: "Plans",
+        href: "/host/plans",
+        feather: servicesFeather
+      },
+      {
+        label: "My Profile",
+        href: "/host/profile",
+        feather: { ...homeFeather, width: 44, height: 7 }
+      },
+    ];
+  }
+
+  if (role === "creator") {
+    return [
+      {
+        label: "Campaigns",
+        href: "/creator",
+        feather: homeFeather
+      },
+      {
+        label: "Communities",
+        href: "/creator/communities",
+        feather: servicesFeather
+      },
+      {
+        label: "My Profile",
+        href: "/creator/profile",
+        feather: servicesFeather
+      },
+    ];
+  }
+
+  // guest
+  return [];
+}
