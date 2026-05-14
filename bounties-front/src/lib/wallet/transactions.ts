@@ -1210,3 +1210,22 @@ export async function sendSuiTransaction(
     throw new Error(errorMessage || 'Error sending SUI transaction');
   }
 }
+
+// ─── Stellar Escrow — sign XDR with Freighter and return signed XDR ────────────
+
+const STELLAR_ESCROW_NETWORK =
+  process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'mainnet'
+    ? Networks.PUBLIC
+    : Networks.TESTNET;
+
+export async function signEscrowXDR(xdr: string): Promise<string> {
+  const signedResult = await signFreighterTransaction(xdr, {
+    networkPassphrase: STELLAR_ESCROW_NETWORK,
+  });
+
+  if (!signedResult?.signedTxXdr) {
+    throw new Error('Freighter did not return a signed XDR');
+  }
+
+  return signedResult.signedTxXdr;
+}
