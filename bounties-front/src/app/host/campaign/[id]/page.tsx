@@ -14,6 +14,7 @@ import {
   WinnersRank,
   ShortUrlSection,
 } from "@/components/campaigns/detail";
+import StellarEscrowSection from "@/components/stellar/StellarEscrowSection";
 
 interface CampaignDetailPageProps {
   params: Promise<{
@@ -302,6 +303,12 @@ export default function CampaignDetailPage({
                 ></div>
 
                 <CampaignPrizes campaignId={campaignId} campaign={campaign} />
+
+                <StellarEscrowSection
+                  campaignId={campaignId}
+                  talentPublicKey={(campaign as any).talent_stellar_wallet}
+                  campaignAmount={String((campaign as any).total_budget || "10")}
+                />
 
                 <CampaignSubmission
                   campaignId={campaignId}
