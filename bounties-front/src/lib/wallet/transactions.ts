@@ -1219,13 +1219,25 @@ const STELLAR_ESCROW_NETWORK =
     : Networks.TESTNET;
 
 export async function signEscrowXDR(xdr: string): Promise<string> {
-  const signedResult = await signFreighterTransaction(xdr, {
-    networkPassphrase: STELLAR_ESCROW_NETWORK,
-  });
+  try {
+    const signedResult = await signFreighterTransaction(xdr, {
+      networkPassphrase: STELLAR_ESCROW_NETWORK,
+    });
 
-  if (!signedResult?.signedTxXdr) {
-    throw new Error('Freighter did not return a signed XDR');
+    if (!signedResult?.signedTxXdr) {
+      throw new Error('Freighter did not return a signed XDR');
+    }
+
+    return signedResult.signedTxXdr;
+  } catch (err: any) {
+    const msg: string = (err?.message ?? String(err)).toLowerCase();
+    const isRejection =
+      msg.includes('declined') ||
+      msg.includes('rejected') ||
+      msg.includes('cancelled') ||
+      msg.includes('cancel') ||
+      msg === 'user_rejected';
+    if (isRejection) throw new Error('USER_REJECTED');
+    throw err;
   }
-
-  return signedResult.signedTxXdr;
 }
