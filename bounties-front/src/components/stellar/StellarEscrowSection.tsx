@@ -75,7 +75,7 @@ function Row({
   );
 }
 
-function Steps({ step }: { step: 0 | 1 | 2 }) {
+function Steps({ step }: { step: 0 | 1 | 2 | 3 }) {
   const items = ["Depositar", "Bloqueado", "Liberar"];
   return (
     <div className="flex items-center justify-center gap-0 py-1">
@@ -259,10 +259,12 @@ export default function StellarEscrowSection({
   const isExpired = escrow?.deadline ? nowSec > escrow.deadline : false;
   const deadlineStr = escrow?.deadline ? fmtDate(escrow.deadline) : null;
 
-  const step: 0 | 1 | 2 = !escrow
+  const step: 0 | 1 | 2 | 3 = !escrow
     ? 0
     : escrow.status === "FUNDED" || escrow.status === "CREATED"
     ? 1
+    : escrow.status === "COMPLETED" || escrow.status === "REFUNDED"
+    ? 3
     : 2;
 
   const busy = phase !== "idle";
