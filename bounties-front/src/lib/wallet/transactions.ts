@@ -149,9 +149,10 @@ const SUI_TOKEN_ADDRESSES: Record<string, string> = {
   usdt: '0x375f70cf2ae4c00bf37117d0c85a2c71545e6ee05c4a5c7d282cd66a4504b068::usdt::USDT',
 };
 
-const STELLAR_USDC_ISSUER = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
+const STELLAR_USDC_ISSUER = process.env.NEXT_PUBLIC_STELLAR_USDC_ISSUER || 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
 const STELLAR_HORIZON_URL = process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL || 'https://horizon.stellar.org';
 const stellarServer = new Horizon.Server(STELLAR_HORIZON_URL);
+const STELLAR_NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
 
 const ERC20_ABI = [
   {
@@ -878,7 +879,7 @@ export async function sendStellarTransaction(
     // 3. Construir a transação
     const transaction = new StellarTransactionBuilder(sourceAccount, {
       fee: (await stellarServer.fetchBaseFee()).toString(),
-      networkPassphrase: Networks.PUBLIC,
+      networkPassphrase: STELLAR_NETWORK,
     })
       .addOperation(
         Operation.payment({
@@ -893,7 +894,7 @@ export async function sendStellarTransaction(
     // 4. Assinar com Freighter
     const xdr = transaction.toXDR();
     const signedResult = await signFreighterTransaction(xdr, {
-        networkPassphrase: Networks.PUBLIC
+        networkPassphrase: STELLAR_NETWORK
     });
 
     if (!signedResult || !signedResult.signedTxXdr) {
@@ -902,7 +903,7 @@ export async function sendStellarTransaction(
 
     // 5. Enviar para a rede
     const result = await stellarServer.submitTransaction(
-      StellarTransactionBuilder.fromXDR(signedResult.signedTxXdr, Networks.PUBLIC)
+      StellarTransactionBuilder.fromXDR(signedResult.signedTxXdr, STELLAR_NETWORK)
     );
 
     return result.hash;

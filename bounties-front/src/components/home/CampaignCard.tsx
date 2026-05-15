@@ -211,9 +211,9 @@ export default React.memo(function CampaignCard({
 
       <div className="text-white font-medium mb-4 line-clamp-3 flex-grow text-sm md:text-base">
         {renderMarkdown(
-          campaign.about_project.length > 150
-            ? `${campaign.about_project.substring(0, 150)}...`
-            : campaign.about_project
+          (campaign.about_project?.length ?? 0) > 150
+            ? `${campaign.about_project!.substring(0, 150)}...`
+            : (campaign.about_project ?? '')
         )}
       </div>
 

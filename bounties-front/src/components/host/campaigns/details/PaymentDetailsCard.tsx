@@ -28,7 +28,7 @@ export default function PaymentDetailsCard({ campaign }: PaymentDetailsCardProps
             <div className="flex justify-between items-center">
               <span className="text-gray-400 uppercase tracking-wide">Total Prize</span>
               <span className="text-white font-bold flex items-center gap-2">
-                <FiDollarSign className="text-[var(--color-primary)]" /> {campaign.total_prize_pool.toLocaleString()} <span className="uppercase">{campaign.payment_token}</span>
+                <FiDollarSign className="text-[var(--color-primary)]" /> {(campaign.total_prize_pool ?? 0).toLocaleString()} <span className="uppercase">{campaign.payment_token}</span>
               </span>
             </div>
             <div className="flex justify-between items-center">
