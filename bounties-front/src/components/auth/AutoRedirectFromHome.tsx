@@ -34,9 +34,31 @@ export default function AutoRedirectFromHome() {
 
     const target = getAuthedHomeRedirectPath();
     if (!target) return;
+
+    // Sync localStorage token → cookie so the middleware accepts the redirect
+    const token = localStorage.getItem("bounties_token");
+    const authUser = localStorage.getItem("auth_user");
+    if (token) {
+      document.cookie = `bounties_token=${token}; path=/`;
+    }
+    if (authUser) {
+      document.cookie = `auth_user=${encodeURIComponent(authUser)}; path=/`;
+    }
+
     setShowRedirectOverlay(true);
     prefetchPostLoginDestination(router, target);
     router.replace(target);
+
+    // Safety: if still on "/" after 3s the redirect was rejected — clear stale auth
+    const timeout = setTimeout(() => {
+      localStorage.removeItem("bounties_token");
+      localStorage.removeItem("auth_user");
+      document.cookie = "bounties_token=; path=/; max-age=0";
+      document.cookie = "auth_user=; path=/; max-age=0";
+      setShowRedirectOverlay(false);
+    }, 3000);
+
+    return () => clearTimeout(timeout);
   }, [pathname, router]);
 
   if (!showRedirectOverlay) return null;
