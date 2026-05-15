@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 const DEMO_TOKEN =
-  "eyJhbGciOiAiSFMyNTYiLCAidHlwIjogIkpXVCJ9.eyJyb2xlIjogIkhPU1QiLCAicmVnaXN0ZXJDb21wbGV0ZWQiOiB0cnVlLCAic3RhdHVzIjogImFjdGl2ZSIsICJleHAiOiAxNzgxMzk2MTg3LCAiaWQiOiAidGVzdC1ob3N0LXN0ZWxsYXItZGVtbyJ9.demoSignature";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YTA2OGU2YWIyMzdiOWE0ODBhY2Q3MzkiLCJlbWFpbCI6ImRlbW8taG9zdEBuaWRvLmRlbW8iLCJyb2xlIjoiSE9TVCIsInN0YXR1cyI6ImFjdGl2ZSIsInJlZ2lzdGVyQ29tcGxldGVkIjp0cnVlLCJpYXQiOjE3Nzg4MTQ1NzAsImV4cCI6MTc4MTQwNjU3MCwiYXVkIjoiYm91bnRpZXMtdXNlcnMiLCJpc3MiOiJib3VudGllcy1hcGkifQ.qjMdk1XtpdqLkTj39vUfRpYzmytHKCjNlfL6OUvEoFY";
 
 const DEMO_USER = JSON.stringify({
   role: "HOST",
