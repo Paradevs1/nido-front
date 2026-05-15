@@ -197,7 +197,7 @@ export default function CampaignPrizes({
                     </div>
                     <div className="flex-1 h-px bg-gradient-to-r from-gray-600 to-transparent"></div>
                     <span className="font-semibold text-white text-sm whitespace-nowrap flex-shrink-0 flex items-center gap-1.5">
-                      ${tier.payment_amount.toLocaleString()}{" "}
+                      ${(tier.payment_amount ?? 0).toLocaleString()}{" "}
                       {campaign.payment_token}
                       <Image
                         src={getTokenIconUrl(campaign.payment_token)}
