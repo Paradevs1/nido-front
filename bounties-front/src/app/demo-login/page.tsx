@@ -13,8 +13,6 @@ const DEMO_USER = JSON.stringify({
   accountStatus: "active",
 });
 
-const CAMPAIGN_ID = "6a05df2d69ba03d1c1ecf76e";
-
 export default function DemoLoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -25,7 +23,7 @@ export default function DemoLoginPage() {
     localStorage.setItem("auth_user", DEMO_USER);
     document.cookie = `bounties_token=${DEMO_TOKEN}; path=/`;
     document.cookie = `auth_user=${encodeURIComponent(DEMO_USER)}; path=/`;
-    router.push(`/host/campaign/${CAMPAIGN_ID}`);
+    router.push("/host/campaign");
   };
 
   return (
@@ -61,15 +59,9 @@ export default function DemoLoginPage() {
             <span className="text-[#696E72]">Conta</span>
             <span className="text-white font-medium">ParaDevs (Demo)</span>
           </div>
-          <div className="flex justify-between py-2 border-b border-white/5">
+          <div className="flex justify-between py-2">
             <span className="text-[#696E72]">Rede</span>
             <span className="text-amber-400 font-medium">Stellar Testnet</span>
-          </div>
-          <div className="flex justify-between py-2">
-            <span className="text-[#696E72]">Campanha</span>
-            <span className="text-white font-mono">
-              {CAMPAIGN_ID.slice(0, 8)}…
-            </span>
           </div>
         </div>
 
