@@ -344,12 +344,20 @@ export default function StellarEscrowSection({
                 on-chain. O valor só é liberado quando você aprovar — sem custódia da NIDO.
               </p>
 
-              {/* talent wallet input */}
-              {!talentProp && (
+              {/* talent wallet */}
+              {talentProp ? (
+                <div className="flex items-center gap-2 bg-[#26485E]/30 rounded-xl px-3 py-2">
+                  <span className="text-[10px] text-[#696E72] font-medium uppercase tracking-wide shrink-0">Talent</span>
+                  <span className="text-xs text-white font-mono ml-auto">{fmtKey(talentProp)}</span>
+                </div>
+              ) : (
                 <div className="space-y-1.5">
-                  <label className="text-[11px] text-[#696E72] font-medium">
-                    Endereço Stellar do Talent
-                  </label>
+                  <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5">
+                    <span className="text-amber-400 text-xs shrink-0 mt-0.5">!</span>
+                    <p className="text-xs text-amber-400 leading-relaxed">
+                      O talent ainda não registrou a wallet Stellar. Aguarde ou informe o endereço manualmente.
+                    </p>
+                  </div>
                   <input
                     type="text"
                     value={talentInput}

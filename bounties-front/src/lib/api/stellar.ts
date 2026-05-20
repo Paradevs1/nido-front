@@ -4,9 +4,12 @@ const STELLAR_BASE = `${API_BASE_URL}/api/stellar`;
 
 export interface StellarEscrowStatus {
   publicKey: string;
+  hostPublicKey: string;
+  talentPublicKey: string;
   jobId: string;
   status: 'CREATED' | 'FUNDED' | 'COMPLETED' | 'REFUNDED' | 'DISPUTED';
   balance: string;
+  lockedAmount: string;
   deadline?: number;
   paymentTxXDR?: string;
   refundTxXDR?: string;

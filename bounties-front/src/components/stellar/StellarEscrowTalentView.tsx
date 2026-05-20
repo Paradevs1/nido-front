@@ -32,6 +32,13 @@ function explorerAccount(addr: string) {
 function fmtKey(k: string) {
   return `${k.slice(0, 6)}…${k.slice(-4)}`;
 }
+function fmtAmount(raw: string | undefined): string {
+  if (!raw) return "0";
+  const n = parseFloat(raw);
+  if (isNaN(n)) return raw;
+  // remove trailing zeros: 10.0000000 → "10", 0.5000000 → "0.5"
+  return n % 1 === 0 ? n.toFixed(0) : n.toString();
+}
 function fmtDate(unix: number) {
   return new Date(unix * 1000).toLocaleDateString("pt-BR", {
     day: "2-digit",
@@ -177,8 +184,12 @@ export default function StellarEscrowTalentView({
   // ─── claim dispute ──────────────────────────────────────────────────────────
 
   const handleClaim = async () => {
-    if (!isStellarConnected) return;
+    if (!isStellarConnected || !stellarAddress) return;
     if (!escrow?.disputeResolutionXDR) return;
+    if (escrow.talentPublicKey && stellarAddress !== escrow.talentPublicKey) {
+      setClaimError(`Wallet errada. Conecte ${fmtKey(escrow.talentPublicKey)} no Freighter.`);
+      return;
+    }
     setClaimPhase("signing");
     setClaimError(null);
     setClaimSuccess(null);
@@ -370,7 +381,7 @@ export default function StellarEscrowTalentView({
             <div className="bg-[#26485E]/30 rounded-xl px-4 divide-y divide-white/5">
               <Row label="Bloqueado para você">
                 <span className="font-semibold text-emerald-300">
-                  {escrow.balance} USDC
+                  {fmtAmount(escrow.balance)} USDC
                 </span>
               </Row>
               <Row label="Conta Escrow">
@@ -430,7 +441,7 @@ export default function StellarEscrowTalentView({
               <div>
                 <p className="text-sm font-semibold text-white">Pagamento recebido</p>
                 <p className="text-xs text-[#696E72] mt-0.5">
-                  {escrow.balance ? `${escrow.balance} USDC` : "USDC"} enviado para sua wallet.
+                  {fmtAmount(escrow.lockedAmount)} USDC enviado para sua wallet.
                 </p>
               </div>
             </div>
@@ -518,19 +529,49 @@ export default function StellarEscrowTalentView({
                   </div>
                 )}
 
-                <button
-                  onClick={handleClaim}
-                  disabled={claimPhase !== "idle" || !isStellarConnected}
-                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {claimPhase === "signing" ? (
-                    <><Spinner />Assinar no Freighter…</>
-                  ) : claimPhase === "submitting" ? (
-                    <><Spinner />Enviando…</>
-                  ) : (
-                    "Assinar e Receber USDC"
-                  )}
-                </button>
+                {!isStellarConnected ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-[#696E72] text-center">
+                      Conecte o Freighter com a wallet{" "}
+                      {escrow.talentPublicKey && (
+                        <span className="font-mono text-white/70">{fmtKey(escrow.talentPublicKey)}</span>
+                      )}{" "}
+                      para assinar.
+                    </p>
+                    <button
+                      onClick={connectStellar}
+                      className="w-full py-2.5 rounded-xl border border-emerald-500/30 text-emerald-300 text-sm font-semibold hover:bg-emerald-500/10 transition-all flex items-center justify-center gap-2"
+                    >
+                      <FreighterIcon />
+                      Conectar Freighter
+                    </button>
+                  </div>
+                ) : escrow.talentPublicKey && stellarAddress && stellarAddress !== escrow.talentPublicKey ? (
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5">
+                      <span className="text-amber-400 text-xs shrink-0 mt-0.5">!</span>
+                      <p className="text-xs text-amber-400 leading-relaxed">
+                        Wallet errada. Este escrow exige{" "}
+                        <span className="font-mono">{fmtKey(escrow.talentPublicKey)}</span>.
+                        Troque a conta no Freighter.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleClaim}
+                    disabled={claimPhase !== "idle"}
+                    className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {claimPhase === "signing" ? (
+                      <><Spinner />Assinar no Freighter…</>
+                    ) : claimPhase === "submitting" ? (
+                      <><Spinner />Enviando…</>
+                    ) : (
+                      "Assinar e Receber USDC"
+                    )}
+                  </button>
+                )}
               </div>
             )}
 

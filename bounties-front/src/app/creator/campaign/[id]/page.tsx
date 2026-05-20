@@ -357,11 +357,7 @@ export default function CampaignDetailPage({
                 {campaign.payment_chain === "stellar" && (
                   <StellarEscrowTalentView
                     campaignId={campaignId}
-                    talentAmount={(() => {
-                      if (!campaign.isPrivate || !campaign.list_kols || !user?.id) return undefined;
-                      const kol = campaign.list_kols.find((k) => k.userId === user.id);
-                      return kol?.amount != null ? String(kol.amount) : undefined;
-                    })()}
+                    talentAmount={undefined}
                   />
                 )}
 

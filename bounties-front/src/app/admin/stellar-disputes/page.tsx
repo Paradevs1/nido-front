@@ -198,12 +198,12 @@ function DisputeCard({
           <div className="bg-[#26485E]/30 rounded-xl px-3 py-2.5 space-y-1">
             <p className="text-[10px] text-[#696E72] font-medium uppercase tracking-wide">Host</p>
             <a
-              href={explorerAccount(dispute.publicKey)}
+              href={explorerAccount(dispute.hostPublicKey)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-[#ff5800] font-mono hover:underline flex items-center gap-1"
             >
-              {fmtKey(dispute.publicKey)}
+              {fmtKey(dispute.hostPublicKey)}
               <ExternalIcon />
             </a>
           </div>
