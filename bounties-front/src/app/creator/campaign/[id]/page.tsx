@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { campaignApi, Campaign } from "@/lib/api/campaign";
 import { creatorApi } from "@/lib/api/creator";
 import { listMyCommunities } from "@/lib/api/community";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import {
   CampaignDetails,
   CampaignComments,
@@ -16,6 +17,7 @@ import {
   ShortUrlSection,
   ShortUrlSectionKols,
 } from "@/components/campaigns/detail";
+import StellarEscrowTalentView from "@/components/stellar/StellarEscrowTalentView";
 
 interface CampaignDetailPageProps {
   params: Promise<{
@@ -27,6 +29,7 @@ export default function CampaignDetailPage({
   params,
 }: CampaignDetailPageProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -349,6 +352,18 @@ export default function CampaignDetailPage({
                 ></div>
 
                 <CampaignPrizes campaignId={campaignId} campaign={campaign} />
+
+                {/* Stellar Escrow — visível apenas para campanhas com payment_chain="stellar" */}
+                {campaign.payment_chain === "stellar" && (
+                  <StellarEscrowTalentView
+                    campaignId={campaignId}
+                    talentAmount={(() => {
+                      if (!campaign.isPrivate || !campaign.list_kols || !user?.id) return undefined;
+                      const kol = campaign.list_kols.find((k) => k.userId === user.id);
+                      return kol?.amount != null ? String(kol.amount) : undefined;
+                    })()}
+                  />
+                )}
 
                 <CampaignSubmission
                   campaignId={campaignId}
