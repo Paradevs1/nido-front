@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useWalletContext } from "@/lib/contexts/WalletContext";
 import { stellarApi, StellarEscrowStatus } from "@/lib/api/stellar";
 import { creatorApi } from "@/lib/api/creator";
+import { signEscrowXDR } from "@/lib/wallet/transactions";
+import StellarDisputeModal from "@/components/stellar/StellarDisputeModal";
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -15,6 +17,7 @@ interface Props {
 }
 
 type SavePhase = "idle" | "saving" | "saved";
+type ClaimPhase = "idle" | "signing" | "submitting";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -124,6 +127,10 @@ export default function StellarEscrowTalentView({
   const [loadingEscrow, setLoadingEscrow] = useState(true);
   const [savePhase, setSavePhase] = useState<SavePhase>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [claimPhase, setClaimPhase] = useState<ClaimPhase>("idle");
+  const [claimError, setClaimError] = useState<string | null>(null);
+  const [claimSuccess, setClaimSuccess] = useState<string | null>(null);
+  const [disputeModal, setDisputeModal] = useState(false);
 
   // Endereço registrado no perfil (começa com o prop, atualizado ao salvar)
   const [registeredWallet, setRegisteredWallet] = useState(savedStellarWallet ?? "");
@@ -167,6 +174,31 @@ export default function StellarEscrowTalentView({
     }
   };
 
+  // ─── claim dispute ──────────────────────────────────────────────────────────
+
+  const handleClaim = async () => {
+    if (!isStellarConnected) return;
+    if (!escrow?.disputeResolutionXDR) return;
+    setClaimPhase("signing");
+    setClaimError(null);
+    setClaimSuccess(null);
+    try {
+      const signed = await signEscrowXDR(escrow.disputeResolutionXDR);
+      setClaimPhase("submitting");
+      const res = await stellarApi.claimDispute(campaignId, signed);
+      setClaimSuccess(`USDC recebido — TX: ${res.data.transactionHash.slice(0, 16)}…`);
+      await fetchEscrow();
+    } catch (e: any) {
+      if (e.message === "USER_REJECTED") {
+        setClaimPhase("idle");
+        return;
+      }
+      setClaimError(e.message || "Falha ao assinar.");
+    } finally {
+      setClaimPhase("idle");
+    }
+  };
+
   // ─── computed ────────────────────────────────────────────────────────────────
 
   const nowSec = Math.floor(Date.now() / 1000);
@@ -194,6 +226,15 @@ export default function StellarEscrowTalentView({
   // ─── render ──────────────────────────────────────────────────────────────────
 
   return (
+    <>
+    <StellarDisputeModal
+      isOpen={disputeModal}
+      onClose={() => setDisputeModal(false)}
+      onSuccess={fetchEscrow}
+      jobId={campaignId}
+      initiator="TALENT"
+      escrowAmount={escrow?.balance ?? talentAmount}
+    />
     <div className="rounded-2xl border border-white/10 bg-[var(--color-card)] overflow-hidden">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -370,6 +411,14 @@ export default function StellarEscrowTalentView({
                 </p>
               </div>
             )}
+
+            {/* Dispute CTA — entrega feita, host recusou */}
+            <button
+              onClick={() => setDisputeModal(true)}
+              className="w-full py-2 rounded-xl border border-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/10 hover:border-red-500/30 transition-all"
+            >
+              Host recusou minha entrega — Abrir disputa
+            </button>
           </div>
         )}
 
@@ -427,11 +476,73 @@ export default function StellarEscrowTalentView({
 
         {/* ── ESTADO 6: DISPUTED ───────────────────────────────────────────── */}
         {escrow?.status === "DISPUTED" && (
-          <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 space-y-1">
-            <p className="text-sm font-semibold text-white">Disputa em análise</p>
-            <p className="text-xs text-[#696E72]">
-              O árbitro da NIDO está revisando as evidências. Você será notificado com o resultado.
-            </p>
+          <div className="space-y-3">
+            {/* Sub-estado: arbiter ainda não decidiu */}
+            {!escrow.disputeWinner && (
+              <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 space-y-1">
+                <p className="text-sm font-semibold text-white">Disputa em análise</p>
+                <p className="text-xs text-[#696E72] leading-relaxed">
+                  O árbitro da NIDO está revisando as evidências. Você será notificado com o resultado.
+                </p>
+                {escrow.disputeReason && (
+                  <p className="text-xs text-[#696E72] mt-2 pt-2 border-t border-red-500/10">
+                    Motivo: <span className="text-white/70">{escrow.disputeReason}</span>
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Sub-estado: talent ganhou — precisa assinar para receber */}
+            {escrow.disputeWinner === "TALENT" && escrow.disputeResolutionXDR && (
+              <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 space-y-3">
+                <div className="flex items-start gap-3">
+                  <span className="text-xl mt-0.5 leading-none">🏆</span>
+                  <div>
+                    <p className="text-sm font-semibold text-white">Você ganhou a disputa</p>
+                    <p className="text-xs text-[#696E72] mt-0.5">
+                      O árbitro decidiu a seu favor. Assine com o Freighter para receber os USDC.
+                    </p>
+                  </div>
+                </div>
+
+                {claimError && (
+                  <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                    <span className="text-red-400 text-xs shrink-0">✕</span>
+                    <p className="text-xs text-red-400">{claimError}</p>
+                  </div>
+                )}
+                {claimSuccess && (
+                  <div className="flex items-start gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2">
+                    <span className="text-emerald-400 text-xs shrink-0">✓</span>
+                    <p className="text-xs text-emerald-400">{claimSuccess}</p>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleClaim}
+                  disabled={claimPhase !== "idle" || !isStellarConnected}
+                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {claimPhase === "signing" ? (
+                    <><Spinner />Assinar no Freighter…</>
+                  ) : claimPhase === "submitting" ? (
+                    <><Spinner />Enviando…</>
+                  ) : (
+                    "Assinar e Receber USDC"
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Sub-estado: host ganhou */}
+            {escrow.disputeWinner === "HOST" && (
+              <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 space-y-1">
+                <p className="text-sm font-semibold text-white">Disputa encerrada</p>
+                <p className="text-xs text-[#696E72] leading-relaxed">
+                  O árbitro decidiu a favor do Host. Os fundos serão reembolsados ao Host.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -447,6 +558,7 @@ export default function StellarEscrowTalentView({
         </span>
       </div>
     </div>
+    </>
   );
 }
 

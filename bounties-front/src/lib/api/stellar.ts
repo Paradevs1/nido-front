@@ -13,6 +13,12 @@ export interface StellarEscrowStatus {
   releaseTxHash?: string;
   refundCloseTxHash?: string;
   createdAt: string;
+  // Dispute
+  disputeReason?: string;
+  disputeInitiator?: 'HOST' | 'TALENT';
+  disputeWinner?: 'HOST' | 'TALENT';
+  disputeResolutionXDR?: string;
+  disputeClosedTxHash?: string;
 }
 
 export interface CreateEscrowPayload {
@@ -76,5 +82,52 @@ export const stellarApi = {
       body: JSON.stringify({ jobId, hostSignedXDR }),
     });
     return handleResponse<{ success: boolean; data: { transactionHash: string }; message: string }>(res);
+  },
+
+  // ─── Dispute ──────────────────────────────────────────────────────────────────
+
+  openDispute: async (jobId: string, reason: string, initiator: 'HOST' | 'TALENT') => {
+    const res = await fetch(`${STELLAR_BASE}/dispute`, {
+      method: 'POST',
+      headers: getDefaultHeaders(),
+      body: JSON.stringify({ jobId, reason, initiator }),
+    });
+    return handleResponse<{ success: boolean; message: string }>(res);
+  },
+
+  getDisputeXDR: async (jobId: string) => {
+    const res = await fetch(`${STELLAR_BASE}/escrow/${jobId}/dispute-xdr`, {
+      headers: getDefaultHeaders(),
+    });
+    return handleResponse<{ success: boolean; data: { disputeResolutionXDR: string; winner: 'HOST' | 'TALENT'; jobId: string } }>(res);
+  },
+
+  claimDispute: async (jobId: string, winnerSignedXDR: string) => {
+    const res = await fetch(`${STELLAR_BASE}/dispute/claim`, {
+      method: 'POST',
+      headers: getDefaultHeaders(),
+      body: JSON.stringify({ jobId, winnerSignedXDR }),
+    });
+    return handleResponse<{ success: boolean; data: { transactionHash: string }; message: string }>(res);
+  },
+
+  // ─── Admin ────────────────────────────────────────────────────────────────────
+
+  admin: {
+    listDisputes: async () => {
+      const res = await fetch(`${STELLAR_BASE}/admin/disputes`, {
+        headers: getDefaultHeaders(),
+      });
+      return handleResponse<{ success: boolean; data: StellarEscrowStatus[] }>(res);
+    },
+
+    resolveDispute: async (jobId: string, winner: 'HOST' | 'TALENT') => {
+      const res = await fetch(`${STELLAR_BASE}/admin/resolve`, {
+        method: 'POST',
+        headers: getDefaultHeaders(),
+        body: JSON.stringify({ jobId, winner }),
+      });
+      return handleResponse<{ success: boolean; data: { disputeResolutionXDR: string; winnerPublicKey: string; winner: 'HOST' | 'TALENT' }; message: string }>(res);
+    },
   },
 };

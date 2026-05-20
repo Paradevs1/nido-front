@@ -45,6 +45,11 @@ const CARDS = [
     description: "Exportar creators, hosts, pagamentos e short URLs em Excel.",
     href: "/admin/exports",
   },
+  {
+    title: "Disputas Stellar",
+    description: "Painel de arbitragem — revisar escrows em disputa e emitir decisão (Talent vence / Host vence).",
+    href: "/admin/stellar-disputes",
+  },
 ] as const;
 
 export default function AdminDashboardPage() {

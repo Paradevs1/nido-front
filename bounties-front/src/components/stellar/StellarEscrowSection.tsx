@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useWalletContext } from "@/lib/contexts/WalletContext";
 import StellarWalletModal from "@/components/wallet/StellarWalletModal";
+import StellarDisputeModal from "@/components/stellar/StellarDisputeModal";
 import { stellarApi, StellarEscrowStatus } from "@/lib/api/stellar";
 import { signEscrowXDR } from "@/lib/wallet/transactions";
 
@@ -143,6 +144,7 @@ export default function StellarEscrowSection({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [walletModal, setWalletModal] = useState(false);
+  const [disputeModal, setDisputeModal] = useState(false);
   const [talentInput, setTalentInput] = useState("");
 
   const talentKey = talentProp || talentInput.trim() || undefined;
@@ -293,6 +295,14 @@ export default function StellarEscrowSection({
           connectStellar();
         }}
       />
+      <StellarDisputeModal
+        isOpen={disputeModal}
+        onClose={() => setDisputeModal(false)}
+        onSuccess={fetchStatus}
+        jobId={campaignId}
+        initiator="HOST"
+        escrowAmount={escrow?.balance ?? campaignAmount}
+      />
 
       <div className="rounded-2xl border border-white/10 bg-[var(--color-card)] overflow-hidden">
 
@@ -423,13 +433,37 @@ export default function StellarEscrowSection({
           )}
 
           {/* ── Terminal: disputed ───────────────────────────────────────────── */}
-          {escrow?.status === "DISPUTED" && (
+          {escrow?.status === "DISPUTED" && !escrow.disputeWinner && (
             <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 space-y-1">
               <p className="text-sm font-semibold text-white">
                 Disputa em andamento
               </p>
               <p className="text-xs text-[#696E72]">
                 O árbitro da NIDO está revisando as evidências.
+              </p>
+              {escrow.disputeReason && (
+                <p className="text-xs text-[#696E72] mt-2 pt-2 border-t border-red-500/10">
+                  Motivo: <span className="text-white/70">{escrow.disputeReason}</span>
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Host ganhou a disputa — claim */}
+          {escrow?.status === "DISPUTED" && escrow.disputeWinner === "HOST" && escrow.disputeResolutionXDR && (
+            <HostDisputeClaim
+              escrow={escrow}
+              campaignId={campaignId}
+              onSuccess={fetchStatus}
+            />
+          )}
+
+          {/* Talent ganhou — aguardando talent assinar */}
+          {escrow?.status === "DISPUTED" && escrow.disputeWinner === "TALENT" && (
+            <div className="rounded-xl bg-purple-500/10 border border-purple-500/20 px-4 py-3 space-y-1">
+              <p className="text-sm font-semibold text-white">Disputa encerrada</p>
+              <p className="text-xs text-[#696E72]">
+                O árbitro decidiu a favor do Talent. O Talent irá receber os USDC.
               </p>
             </div>
           )}
@@ -510,6 +544,14 @@ export default function StellarEscrowSection({
                 {isExpired
                   ? "Solicitar Reembolso"
                   : `Reembolso a partir de ${deadlineStr ?? "…"}`}
+              </button>
+
+              <button
+                onClick={() => setDisputeModal(true)}
+                disabled={busy}
+                className="w-full py-2 rounded-xl border border-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/10 hover:border-red-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Talent não entregou — Abrir disputa
               </button>
             </div>
           )}
@@ -632,6 +674,67 @@ function FreighterIcon() {
         strokeLinejoin="round"
       />
     </svg>
+  );
+}
+
+// ─── HostDisputeClaim ─────────────────────────────────────────────────────────
+
+function HostDisputeClaim({
+  escrow,
+  campaignId,
+  onSuccess,
+}: {
+  escrow: StellarEscrowStatus;
+  campaignId: string;
+  onSuccess: () => void;
+}) {
+  const [phase, setPhase] = useState<"idle" | "signing" | "submitting">("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const handleClaim = async () => {
+    if (!escrow.disputeResolutionXDR) return;
+    setPhase("signing");
+    setError(null);
+    try {
+      const signed = await signEscrowXDR(escrow.disputeResolutionXDR);
+      setPhase("submitting");
+      const res = await stellarApi.claimDispute(campaignId, signed);
+      setSuccess(`Reembolso recebido — TX: ${res.data.transactionHash.slice(0, 16)}…`);
+      onSuccess();
+    } catch (e: any) {
+      if (e.message === "USER_REJECTED") { setPhase("idle"); return; }
+      setError(e.message || "Falha ao assinar.");
+    } finally {
+      setPhase("idle");
+    }
+  };
+
+  return (
+    <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 space-y-3">
+      <div className="flex items-start gap-3">
+        <span className="text-xl mt-0.5 leading-none">🏆</span>
+        <div>
+          <p className="text-sm font-semibold text-white">Você ganhou a disputa</p>
+          <p className="text-xs text-[#696E72] mt-0.5">
+            O árbitro decidiu a seu favor. Assine para receber o reembolso.
+          </p>
+        </div>
+      </div>
+      {error && <p className="text-xs text-red-400">{error}</p>}
+      {success && <p className="text-xs text-emerald-400">{success}</p>}
+      {!success && (
+        <button
+          onClick={handleClaim}
+          disabled={phase !== "idle"}
+          className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {phase === "signing" ? <><Spinner />Assinar no Freighter…</> :
+           phase === "submitting" ? <><Spinner />Enviando…</> :
+           "Assinar e Receber Reembolso"}
+        </button>
+      )}
+    </div>
   );
 }
 
