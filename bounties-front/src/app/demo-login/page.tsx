@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 
-const DEMO_CAMPAIGN_ID = "6a0e1cadead105ec638de666";
+const DEMO_CAMPAIGN_ID = "6b0e1cadead105ec638de777";
 
 const SESSIONS = {
   host: {
