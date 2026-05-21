@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 
 const DEMO_CAMPAIGN_ID = "6a0e1cadead105ec638de666";
@@ -32,10 +32,23 @@ const SESSIONS = {
   },
 } as const;
 
+// Admin só aparece com ?admin=nido37 na URL — nunca exposto no link público
+const ADMIN_CODE = "nido37";
+
 type Role = keyof typeof SESSIONS;
 
 export default function DemoLoginPage() {
   const [loading, setLoading] = useState<Role | null>(null);
+  const [showAdmin, setShowAdmin] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setShowAdmin(params.get("admin") === ADMIN_CODE);
+  }, []);
+
+  const visibleRoles = (Object.keys(SESSIONS) as Role[]).filter(
+    (r) => r !== "admin" || showAdmin
+  );
 
   const handleLogin = (role: Role) => {
     setLoading(role);
@@ -66,7 +79,7 @@ export default function DemoLoginPage() {
       </div>
 
       <div className="w-full max-w-sm flex flex-col gap-3">
-        {(Object.keys(SESSIONS) as Role[]).map((role) => {
+        {visibleRoles.map((role) => {
           const s = SESSIONS[role];
           return (
             <div key={role} className="bg-[var(--color-card)] border border-white/10 rounded-2xl p-5 flex flex-col gap-4">
