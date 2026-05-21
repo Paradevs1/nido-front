@@ -33,7 +33,7 @@ const SESSIONS = {
 } as const;
 
 // Admin só aparece com ?admin=nido37 na URL — nunca exposto no link público
-const ADMIN_CODE = "nido37";
+const ADMIN_CODE = "g7Xk2mPq";
 
 type Role = keyof typeof SESSIONS;
 
