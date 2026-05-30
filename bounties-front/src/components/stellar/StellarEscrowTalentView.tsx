@@ -6,6 +6,7 @@ import { stellarApi, StellarEscrowStatus } from "@/lib/api/stellar";
 import { creatorApi } from "@/lib/api/creator";
 import { signEscrowXDR } from "@/lib/wallet/transactions";
 import StellarDisputeModal from "@/components/stellar/StellarDisputeModal";
+import { explorerTx, explorerAccount, NETWORK_BADGE } from "@/lib/stellar/network";
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -21,14 +22,6 @@ type ClaimPhase = "idle" | "signing" | "submitting";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-const NET = "testnet";
-
-function explorerTx(hash: string) {
-  return `https://stellar.expert/explorer/${NET}/tx/${hash}`;
-}
-function explorerAccount(addr: string) {
-  return `https://stellar.expert/explorer/${NET}/account/${addr}`;
-}
 function fmtKey(k: string) {
   return `${k.slice(0, 6)}…${k.slice(-4)}`;
 }
@@ -263,7 +256,7 @@ export default function StellarEscrowTalentView({
           </p>
         </div>
         <span className="text-[10px] text-amber-500/70 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 mt-0.5">
-          TESTNET
+          {NETWORK_BADGE}
         </span>
       </div>
 
@@ -379,9 +372,9 @@ export default function StellarEscrowTalentView({
         {escrow && (escrow.status === "FUNDED" || escrow.status === "CREATED") && (
           <div className="space-y-3">
             <div className="bg-[#26485E]/30 rounded-xl px-4 divide-y divide-white/5">
-              <Row label="Bloqueado para você">
+              <Row label={escrow.status === "CREATED" ? "A receber" : "Bloqueado para você"}>
                 <span className="font-semibold text-emerald-300">
-                  {fmtAmount(escrow.balance)} USDC
+                  {fmtAmount(escrow.status === "CREATED" ? escrow.lockedAmount : escrow.balance)} USDC
                 </span>
               </Row>
               <Row label="Conta Escrow">
@@ -407,7 +400,14 @@ export default function StellarEscrowTalentView({
               )}
             </div>
 
-            {!isExpired ? (
+            {escrow.status === "CREATED" ? (
+              <div className="flex items-center gap-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5">
+                <span className="text-amber-400 text-xs shrink-0">!</span>
+                <p className="text-xs text-amber-400 leading-relaxed">
+                  O Host criou o escrow on-chain, mas ainda não depositou os USDC. Aguarde a confirmação do depósito.
+                </p>
+              </div>
+            ) : !isExpired ? (
               <div className="flex items-center gap-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2.5">
                 <LockIcon />
                 <p className="text-xs text-emerald-400 leading-relaxed">
@@ -423,13 +423,15 @@ export default function StellarEscrowTalentView({
               </div>
             )}
 
-            {/* Dispute CTA — entrega feita, host recusou */}
-            <button
-              onClick={() => setDisputeModal(true)}
-              className="w-full py-2 rounded-xl border border-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/10 hover:border-red-500/30 transition-all"
-            >
-              Host recusou minha entrega — Abrir disputa
-            </button>
+            {/* Dispute CTA — entrega feita, host recusou (só após depósito) */}
+            {escrow.status === "FUNDED" && (
+              <button
+                onClick={() => setDisputeModal(true)}
+                className="w-full py-2 rounded-xl border border-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/10 hover:border-red-500/30 transition-all"
+              >
+                Host recusou minha entrega — Abrir disputa
+              </button>
+            )}
           </div>
         )}
 

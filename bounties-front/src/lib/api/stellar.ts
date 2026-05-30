@@ -11,6 +11,8 @@ export interface StellarEscrowStatus {
   balance: string;
   lockedAmount: string;
   deadline?: number;
+  fundingTxXDR?: string;
+  fundTxHash?: string;
   paymentTxXDR?: string;
   refundTxXDR?: string;
   releaseTxHash?: string;
@@ -22,6 +24,7 @@ export interface StellarEscrowStatus {
   disputeWinner?: 'HOST' | 'TALENT';
   disputeResolutionXDR?: string;
   disputeClosedTxHash?: string;
+  mergeTxHash?: string;
 }
 
 export interface CreateEscrowPayload {
@@ -45,7 +48,23 @@ export const stellarApi = {
       headers: getDefaultHeaders(),
       body: JSON.stringify(payload),
     });
-    return handleResponse<{ success: boolean; data: { escrowPublicKey: string; transactionHash: string; preAuthTxs: { paymentTxHash: string; refundTxHash: string; deadline: number } }; message: string }>(res);
+    return handleResponse<{ success: boolean; data: { escrowPublicKey: string; transactionHash: string; fundingTxXDR: string; preAuthTxs: { paymentTxHash: string; refundTxHash: string; deadline: number } }; message: string }>(res);
+  },
+
+  getFundingXDR: async (jobId: string) => {
+    const res = await fetch(`${STELLAR_BASE}/escrow/${jobId}/funding-xdr`, {
+      headers: getDefaultHeaders(),
+    });
+    return handleResponse<{ success: boolean; data: { fundingTxXDR: string; escrowPublicKey: string; amount: string } }>(res);
+  },
+
+  fund: async (jobId: string, hostSignedXDR: string) => {
+    const res = await fetch(`${STELLAR_BASE}/escrow/fund`, {
+      method: 'POST',
+      headers: getDefaultHeaders(),
+      body: JSON.stringify({ jobId, hostSignedXDR }),
+    });
+    return handleResponse<{ success: boolean; data: { transactionHash: string }; message: string }>(res);
   },
 
   getStatus: async (jobId: string) => {

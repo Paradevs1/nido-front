@@ -2,14 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { stellarApi, StellarEscrowStatus } from "@/lib/api/stellar";
+import { explorerAccount } from "@/lib/stellar/network";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-const NET = "testnet";
-
-function explorerAccount(addr: string) {
-  return `https://stellar.expert/explorer/${NET}/account/${addr}`;
-}
 function fmtKey(k: string) {
   return `${k.slice(0, 6)}…${k.slice(-4)}`;
 }

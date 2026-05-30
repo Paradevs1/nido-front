@@ -6,6 +6,7 @@ import StellarWalletModal from "@/components/wallet/StellarWalletModal";
 import StellarDisputeModal from "@/components/stellar/StellarDisputeModal";
 import { stellarApi, StellarEscrowStatus } from "@/lib/api/stellar";
 import { signEscrowXDR } from "@/lib/wallet/transactions";
+import { explorerTx, explorerAccount, NETWORK_BADGE } from "@/lib/stellar/network";
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -20,14 +21,6 @@ type ActionPhase = "idle" | "signing" | "submitting";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-const NET = "testnet";
-
-function explorerTx(hash: string) {
-  return `https://stellar.expert/explorer/${NET}/tx/${hash}`;
-}
-function explorerAccount(addr: string) {
-  return `https://stellar.expert/explorer/${NET}/account/${addr}`;
-}
 function fmtKey(k: string) {
   return `${k.slice(0, 6)}…${k.slice(-4)}`;
 }
@@ -181,6 +174,7 @@ export default function StellarEscrowSection({
     setError(null);
     setSuccess(null);
     try {
+      // 1. Treasury creates + sponsors the escrow account (no USDC moves yet)
       const res = await stellarApi.createEscrow({
         jobId: campaignId,
         hostPublicKey: stellarAddress,
@@ -188,12 +182,52 @@ export default function StellarEscrowSection({
         amount: campaignAmount,
         deadlineDays: campaignDeadlineDays,
       });
+      // 2. Host signs the USDC deposit (host → escrow) — funds leave the host wallet
+      setPhase("signing");
+      const signed = await signEscrowXDR(res.data.fundingTxXDR);
+      setPhase("submitting");
+      const funded = await stellarApi.fund(campaignId, signed);
       setSuccess(
-        `Escrow criado — TX: ${res.data.transactionHash.slice(0, 16)}…`
+        `Depósito concluído — TX: ${funded.data.transactionHash.slice(0, 16)}…`
       );
       await fetchStatus();
     } catch (e: any) {
+      if (e.message === "USER_REJECTED") {
+        // Escrow account was created but funding was cancelled — host can finish later
+        setError("Escrow criado, mas o depósito foi cancelado. Conclua o depósito para bloquear os USDC.");
+        await fetchStatus();
+        setPhase("idle");
+        return;
+      }
       setError(e.message || "Falha ao criar escrow");
+    } finally {
+      setPhase("idle");
+    }
+  };
+
+  const handleFund = async () => {
+    if (!isStellarConnected) {
+      setWalletModal(true);
+      return;
+    }
+    setPhase("signing");
+    setError(null);
+    setSuccess(null);
+    try {
+      const { data } = await stellarApi.getFundingXDR(campaignId);
+      const signed = await signEscrowXDR(data.fundingTxXDR);
+      setPhase("submitting");
+      const res = await stellarApi.fund(campaignId, signed);
+      setSuccess(
+        `Depósito concluído — TX: ${res.data.transactionHash.slice(0, 16)}…`
+      );
+      await fetchStatus();
+    } catch (e: any) {
+      if (e.message === "USER_REJECTED") {
+        setPhase("idle");
+        return;
+      }
+      setError(e.message || "Falha ao concluir depósito");
     } finally {
       setPhase("idle");
     }
@@ -263,8 +297,10 @@ export default function StellarEscrowSection({
 
   const step: 0 | 1 | 2 | 3 = !escrow
     ? 0
-    : escrow.status === "FUNDED" || escrow.status === "CREATED"
+    : escrow.status === "CREATED"
     ? 1
+    : escrow.status === "FUNDED"
+    ? 2
     : escrow.status === "COMPLETED" || escrow.status === "REFUNDED"
     ? 3
     : 2;
@@ -321,7 +357,7 @@ export default function StellarEscrowSection({
             </p>
           </div>
           <span className="text-[10px] text-amber-500/70 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 mt-0.5">
-            TESTNET
+            {NETWORK_BADGE}
           </span>
         </div>
 
@@ -382,9 +418,9 @@ export default function StellarEscrowSection({
           {/* ── Funded details ───────────────────────────────────────────────── */}
           {escrow && (escrow.status === "FUNDED" || escrow.status === "CREATED") && (
             <div className="bg-[#26485E]/30 rounded-xl px-4 divide-y divide-white/5">
-              <Row label="Bloqueado">
+              <Row label={escrow.status === "CREATED" ? "A depositar" : "Bloqueado"}>
                 <span className="font-semibold text-emerald-300">
-                  {escrow.balance} USDC
+                  {escrow.status === "CREATED" ? escrow.lockedAmount : escrow.balance} USDC
                 </span>
               </Row>
               <Row label="Conta Escrow">
@@ -415,6 +451,17 @@ export default function StellarEscrowSection({
                   </span>
                 </Row>
               )}
+            </div>
+          )}
+
+          {/* ── Awaiting funding (escrow created, USDC not deposited yet) ─────── */}
+          {escrow?.status === "CREATED" && (
+            <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5">
+              <span className="text-amber-400 text-xs shrink-0 mt-0.5">!</span>
+              <p className="text-xs text-amber-400 leading-relaxed">
+                Conta escrow criada on-chain. Assine o depósito no Freighter para bloquear os{" "}
+                <span className="font-semibold">{escrow.lockedAmount} USDC</span> da sua carteira.
+              </p>
             </div>
           )}
 
@@ -517,8 +564,24 @@ export default function StellarEscrowSection({
             </button>
           )}
 
+          {/* ── Actions: created (awaiting deposit) ──────────────────────────── */}
+          {escrow?.status === "CREATED" && (
+            <button
+              onClick={handleFund}
+              disabled={busy}
+              className="w-full py-3 rounded-xl bg-[#ff5800] hover:bg-[#e04f00] active:bg-[#c94600] text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <FreighterIcon />
+              {phase === "signing"
+                ? "Assinar no Freighter…"
+                : phase === "submitting"
+                ? "Enviando…"
+                : `Concluir depósito de ${escrow.lockedAmount} USDC`}
+            </button>
+          )}
+
           {/* ── Actions: funded ──────────────────────────────────────────────── */}
-          {(escrow?.status === "FUNDED" || escrow?.status === "CREATED") && (
+          {escrow?.status === "FUNDED" && (
             <div className="flex flex-col gap-2">
               <button
                 onClick={handleRelease}
