@@ -7,6 +7,8 @@ import StellarDisputeModal from "@/components/stellar/StellarDisputeModal";
 import { stellarApi, StellarEscrowStatus } from "@/lib/api/stellar";
 import { signEscrowXDR } from "@/lib/wallet/transactions";
 import { explorerTx, explorerAccount, NETWORK_BADGE } from "@/lib/stellar/network";
+import { fundEscrowViaCctp, CctpProgress } from "@/lib/cctp/fundViaCctp";
+import { CCTP_CHAINS } from "@/lib/cctp/config";
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -39,6 +41,7 @@ const BADGES: Record<
   { label: string; cls: string }
 > = {
   CREATED:   { label: "Criado",    cls: "bg-blue-500/15 text-blue-300 border-blue-500/20" },
+  PENDING_INBOUND_MINT: { label: "Recebendo USDC", cls: "bg-cyan-500/15 text-cyan-300 border-cyan-500/20" },
   FUNDED:    { label: "Ativo ●",   cls: "bg-emerald-500/15 text-emerald-300 border-emerald-500/20" },
   COMPLETED: { label: "Liberado",  cls: "bg-purple-500/15 text-purple-300 border-purple-500/20" },
   REFUNDED:  { label: "Reembolso", cls: "bg-amber-500/15 text-amber-300 border-amber-500/20" },
@@ -139,6 +142,8 @@ export default function StellarEscrowSection({
   const [walletModal, setWalletModal] = useState(false);
   const [disputeModal, setDisputeModal] = useState(false);
   const [talentInput, setTalentInput] = useState("");
+  const [cctpOpen, setCctpOpen] = useState(false);
+  const [cctpProgress, setCctpProgress] = useState<CctpProgress | null>(null);
 
   const talentKey = talentProp || talentInput.trim() || undefined;
 
@@ -232,6 +237,34 @@ export default function StellarEscrowSection({
       setPhase("idle");
     }
   };
+
+  const handleFundViaCctp = async (sourceChain: string) => {
+    setError(null);
+    setSuccess(null);
+    setCctpProgress("preparing");
+    try {
+      const { burnTxHash } = await fundEscrowViaCctp(
+        campaignId,
+        sourceChain,
+        setCctpProgress,
+      );
+      setSuccess(
+        `Burn enviado na origem (${burnTxHash.slice(0, 12)}…). Aguardando o mint chegar na Stellar — isso leva alguns minutos.`,
+      );
+      await fetchStatus();
+    } catch (e: any) {
+      setError(e?.message || "Falha ao fundear via CCTP");
+    } finally {
+      setCctpProgress(null);
+    }
+  };
+
+  // Poll while a cross-chain mint is in flight, until it lands (FUNDED) or fails.
+  useEffect(() => {
+    if (escrow?.status !== "PENDING_INBOUND_MINT") return;
+    const id = setInterval(fetchStatus, 15_000);
+    return () => clearInterval(id);
+  }, [escrow?.status, fetchStatus]);
 
   const handleRelease = async () => {
     if (!isStellarConnected) {
@@ -465,6 +498,23 @@ export default function StellarEscrowSection({
             </div>
           )}
 
+          {/* ── Inbound mint in flight (CCTP) ────────────────────────────────── */}
+          {escrow?.status === "PENDING_INBOUND_MINT" && (
+            <div className="flex items-start gap-2 bg-cyan-500/10 border border-cyan-500/20 rounded-xl px-3 py-2.5">
+              <Spinner />
+              <div className="text-xs text-cyan-300 leading-relaxed">
+                <p className="font-semibold">Recebendo USDC de {escrow.inboundSourceChain ?? "outra rede"} via CCTP…</p>
+                <p className="text-cyan-300/70 mt-0.5">
+                  O burn foi confirmado na origem. Assim que a Circle atestar, o USDC é
+                  mintado na conta escrow automaticamente. Pode levar alguns minutos.
+                </p>
+                {escrow.inboundSourceTxHash && (
+                  <p className="text-cyan-300/50 mt-1 font-mono">burn: {escrow.inboundSourceTxHash.slice(0, 18)}…</p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* ── Terminal: completed ──────────────────────────────────────────── */}
           {escrow?.status === "COMPLETED" && (
             <TerminalCard
@@ -578,6 +628,63 @@ export default function StellarEscrowSection({
                 ? "Enviando…"
                 : `Concluir depósito de ${escrow.lockedAmount} USDC`}
             </button>
+          )}
+
+          {/* ── Actions: fund from another chain (CCTP) ──────────────────────── */}
+          {escrow?.status === "CREATED" && (
+            <div className="space-y-2">
+              {!cctpOpen && cctpProgress === null && (
+                <button
+                  onClick={() => setCctpOpen(true)}
+                  className="w-full py-2 text-xs text-cyan-300/80 hover:text-cyan-300 transition-colors"
+                >
+                  ou fundeie com USDC de outra rede (CCTP) →
+                </button>
+              )}
+
+              {cctpOpen && cctpProgress === null && (
+                <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/[0.04] p-3 space-y-2.5">
+                  <p className="text-xs text-cyan-300/80 leading-relaxed">
+                    Queime USDC em outra rede e receba na conta escrow da Stellar — sem
+                    pools, 1:1, via Circle CCTP.
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {CCTP_CHAINS.map((c) => {
+                      const enabled = c.kind === "evm";
+                      return (
+                        <button
+                          key={c.slug}
+                          onClick={() => enabled && handleFundViaCctp(c.slug)}
+                          disabled={!enabled}
+                          title={enabled ? `Fundear via ${c.label}` : "Em breve"}
+                          className="py-2 rounded-lg text-xs font-medium border border-white/10 bg-white/[0.03] text-white hover:border-cyan-500/40 hover:bg-cyan-500/10 transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
+                        >
+                          {c.label}
+                          {!enabled && <span className="block text-[9px] text-white/40">em breve</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {cctpProgress !== null && (
+                <div className="flex items-center gap-2.5 bg-cyan-500/10 border border-cyan-500/20 rounded-xl px-3 py-2.5">
+                  <Spinner />
+                  <span className="text-xs text-cyan-300">
+                    {cctpProgress === "preparing"
+                      ? "Preparando burn…"
+                      : cctpProgress === "burning"
+                      ? "Confirme o burn na sua carteira…"
+                      : cctpProgress === "registering"
+                      ? "Registrando burn…"
+                      : cctpProgress === "relaying"
+                      ? "Iniciando o relay para a Stellar…"
+                      : "Pronto"}
+                  </span>
+                </div>
+              )}
+            </div>
           )}
 
           {/* ── Actions: funded ──────────────────────────────────────────────── */}

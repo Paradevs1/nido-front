@@ -96,7 +96,7 @@ function isRpcError(error: unknown): boolean {
 }
 
 // Função helper para validar e converter chainId
-function assertSupportedChainId(chainId: number): SupportedChainId {
+export function assertSupportedChainId(chainId: number): SupportedChainId {
   const supportedIds: SupportedChainId[] = [1, 56, 80094, 999, 8453, 42161, 137];
   if (!supportedIds.includes(chainId as SupportedChainId)) {
     throw new Error(`Unsupported chain ID: ${chainId}`);

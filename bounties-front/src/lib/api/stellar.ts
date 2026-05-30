@@ -7,7 +7,7 @@ export interface StellarEscrowStatus {
   hostPublicKey: string;
   talentPublicKey: string;
   jobId: string;
-  status: 'CREATED' | 'FUNDED' | 'COMPLETED' | 'REFUNDED' | 'DISPUTED';
+  status: 'CREATED' | 'PENDING_INBOUND_MINT' | 'FUNDED' | 'COMPLETED' | 'REFUNDED' | 'DISPUTED';
   balance: string;
   lockedAmount: string;
   deadline?: number;
@@ -25,6 +25,28 @@ export interface StellarEscrowStatus {
   disputeResolutionXDR?: string;
   disputeClosedTxHash?: string;
   mergeTxHash?: string;
+  // CCTP inbound funding
+  fundingMethod?: 'STELLAR_NATIVE' | 'CCTP';
+  inboundSourceChain?: string;
+  inboundSourceTxHash?: string;
+  inboundAttestationStatus?: 'PENDING' | 'COMPLETE';
+  inboundMintTxHash?: string;
+}
+
+/** Params the host's source-chain wallet needs to call depositForBurnWithHook. */
+export interface PrepareInboundResponse {
+  jobId: string;
+  sourceChain: string;
+  sourceDomain: number;
+  destinationDomain: number;
+  burnToken: string;
+  amount: string; // base units (6 decimals)
+  mintRecipient: string; // 0x bytes32 (forwarder contract)
+  destinationCaller: string; // 0x bytes32 (zero — anyone can relay)
+  hookData: string; // 0x bytes32 (escrow account)
+  maxFee: string;
+  minFinalityThreshold: number;
+  escrowPublicKey: string;
 }
 
 export interface CreateEscrowPayload {
@@ -65,6 +87,35 @@ export const stellarApi = {
       body: JSON.stringify({ jobId, hostSignedXDR }),
     });
     return handleResponse<{ success: boolean; data: { transactionHash: string }; message: string }>(res);
+  },
+
+  // ─── CCTP V2 inbound funding (fund from another chain) ──────────────────────
+
+  prepareInbound: async (jobId: string, sourceChain: string) => {
+    const res = await fetch(`${STELLAR_BASE}/escrow/inbound/prepare`, {
+      method: 'POST',
+      headers: getDefaultHeaders(),
+      body: JSON.stringify({ jobId, sourceChain }),
+    });
+    return handleResponse<{ success: boolean; data: PrepareInboundResponse }>(res);
+  },
+
+  registerBurn: async (jobId: string, sourceChain: string, sourceTxHash: string) => {
+    const res = await fetch(`${STELLAR_BASE}/escrow/inbound/register`, {
+      method: 'POST',
+      headers: getDefaultHeaders(),
+      body: JSON.stringify({ jobId, sourceChain, sourceTxHash }),
+    });
+    return handleResponse<{ success: boolean; data: { jobId: string; status: string; attestationStatus?: string } }>(res);
+  },
+
+  relayInbound: async (jobId: string) => {
+    const res = await fetch(`${STELLAR_BASE}/escrow/inbound/relay`, {
+      method: 'POST',
+      headers: getDefaultHeaders(),
+      body: JSON.stringify({ jobId }),
+    });
+    return handleResponse<{ success: boolean; data: { jobId: string; status: string; attestationStatus?: string; mintTxHash?: string } }>(res);
   },
 
   getStatus: async (jobId: string) => {
